@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Portal - Nyasura Sekondari</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* RANGI ZA MFUMO: Bluu, Nyeupe, na Nyeusi */
+        :root {
+            --primary-blue: #0d47a1;
+            --dark-blue: #0a3578;
+            --white: #ffffff;
+            --black: #1a1a1a;
+            --light-gray: #f4f6f9;
+            --border-color: #cccccc;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--light-gray); color: var(--black); padding-bottom: 5px; }
+
+        header {
+            background-color: var(--primary-blue);
+            color: var(--white);
+            text-align: center;
+            padding: 25px;
+            border-bottom: 5px solid var(--black);
+        }
+        header h1 { font-size: 26px; text-transform: uppercase; letter-spacing: 1px; }
+        header p { font-size: 14px; margin-top: 5px; font-style: italic; }
+
+        /* Navigation ya Pande Mbili */
+        .user-nav { display: flex; justify-content: center; background-color: var(--black); padding: 10px 0; }
+        .nav-btn {
+            background: none; border: 2px solid var(--white); color: var(--white);
+            padding: 8px 20px; margin: 0 10px; cursor: pointer; font-weight: bold; border-radius: 4px; transition: 0.3s;
+        }
+        .nav-btn.active, .nav-btn:hover { background-color: var(--primary-blue); border-color: var(--primary-blue); }
+
+        /* Sehemu za Kurasa */
+        .page { display: none; max-width: 1400px; margin: 20px auto; padding: 0 20px; }
+        .page.active { display: block; }
+
+        /* RUMU ZA AUTHENTICATION (LOGIN, SIGNUP, RESET) */
+        .auth-container {
+            max-width: 450px; margin: 40px auto; background: var(--white);
+            padding: 30px; border-radius: 8px; border-top: 5px solid var(--primary-blue);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        .auth-container h2 { color: var(--primary-blue); text-align: center; margin-bottom: 20px; }
+        .auth-links { text-align: center; margin-top: 15px; font-size: 14px; }
+        .auth-links a { color: var(--primary-blue); text-decoration: none; font-weight: bold; cursor: pointer; }
+
+        /* UPANDE WA WAZAZI (EXTERNAL) */
+        .parent-box {
+            max-width: 650px; margin: 40px auto; background: var(--white);
+            padding: 30px; border-radius: 8px; border-top: 5px solid var(--primary-blue);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); text-align: center;
+        }
+        .search-group { margin: 20px 0; display: flex; gap: 10px; }
+        .search-group input { flex: 1; padding: 12px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 16px; }
+        .btn-blue { background-color: var(--primary-blue); color: var(--white); font-weight: bold; cursor: pointer; border: none; border-radius: 4px; }
+
+        /* UPANDE WA WALIMU (INTERNAL DASHBOARD) */
+        .teacher-layout { display: grid; grid-template-columns: 380px 1fr; gap: 20px; }
+        .card { background-color: var(--white); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card h2 { color: var(--primary-blue); font-size: 16px; margin-bottom: 15px; border-bottom: 2px solid var(--black); padding-bottom: 5px; }
+        
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; font-weight: bold; font-size: 12px; margin-bottom: 3px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 7px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px; }
+        
+        .subjects-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .upload-box { border: 2px dashed var(--primary-blue); padding: 25px; text-align: center; background-color: #eef2f7; border-radius: 6px; cursor: pointer; font-weight: bold; }
+
+        /* Jedwali la Matokeo */
+        .table-container { overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th, td { border: 1px solid var(--border-color); padding: 8px; text-align: center; }
+        th { background-color: var(--primary-blue); color: var(--white); font-weight: bold; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+
+        .btn-table { padding: 4px 8px; font-size: 10px; border-radius: 3px; border: none; color: white; cursor: pointer; }
+        .btn-sms { background-color: var(--primary-blue); }
+        .btn-print { background-color: var(--black); }
+        .btn-delete { background-color: #cc0000; }
+
+        /* RIPOTI YA PRINT */
+        #printArea { display: none; }
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { display: block; position: absolute; left: 0; top: 0; width: 100%; color: #000; background: #fff; }
+            table { font-size: 13px; width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid #000; padding: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>NYASURA SEKONDARI, BUNDA</h1>
+        <p>S.L.P 219, BUNDA | PORTAL RASMI YA MATOKEO</p>
+    </header>
+
+    <div class="user-nav">
+        <button class="nav-btn active" onclick="badiliUkurasa('wazazi', this)">UPANDE WA WAZAZI (EXTERNAL)</button>
+        <button class="nav-btn" onclick="badiliUkurasa('auth-login', this)">UPANDE WA WALIMU (INTERNAL)</button>
+    </div>
+
+    <div id="page-wazazi" class="page active">
+        <div class="parent-box">
+            <h2>Angalia Rekodi za Mwanafunzi</h2>
+            <p style="font-size: 14px; color: gray; margin-bottom: 10px;">Wazazi ingizeni Namba ya Mtihani kupata Ripoti yenye Masomo 10 na Maoni ya Walimu.</p>
+            <div class="search-group">
+                <input type="text" id="parentSearchNamba" placeholder="Mfano: S0123/0001/2026">
+                <button class="btn-blue" style="padding: 0 25px;" onclick="tafutaMatokeoMzazi()">Tafuta</button>
+            </div>
+            <div id="parentResultArea"></div>
+        </div>
+    </div>
+
+    <div id="page-auth-login" class="page">
+        <div class="auth-container">
+            <h2>Ingia Kwenye Mfumo</h2>
+            <form id="loginForm">
+                <div class="form-group"><label>Barua Pepe (Email):</label><input type="email" id="loginEmail" required></div>
+                <div class="form-group"><label>Nenosiri (Password):</label><input type="password" id="loginPass" required></div>
+                <button type="submit" class="btn-blue" style="width: 100%; padding: 12px;">Ingia Sasa</button>
+            </form>
+            <div class="auth-links">
+                <p>Huna Akaunti? <a onclick="badiliUkurasa('auth-signup')">Jisajili Hapa</a></p>
+                <p style="margin-top: 5px;"><a onclick="badiliUkurasa('auth-reset')">Umesahau Password?</a></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-auth-signup" class="page">
+        <div class="auth-container">
+            <h2>Sajili Akaunti ya Mwalimu</h2>
+            <form id="signupForm">
+                <div class="form-group"><label>Barua Pepe (Email):</label><input type="email" id="signupEmail" required></div>
+                <div class="form-group"><label>Tengeneza Nenosiri:</label><input type="password" id="signupPass" required></div>
+                <button type="submit" class="btn-blue" style="width: 100%; padding: 12px;">Sajili Akaunti</button>
+            </form>
+            <div class="auth-links"><p>Tayari una akaunti? <a onclick="badiliUkurasa('auth-login')">Ingia</a></p></div>
+        </div>
+    </div>
+
+    <div id="page-auth-verify" class="page">
+        <div class="auth-container">
+            <h2>Uthibitisho wa Akaunti</h2>
+            <p style="font-size: 13px; color: gray; text-align: center; margin-bottom: 15px;" id="verifyText"></p>
+            <form id="verifyForm">
+                <div class="form-group">
+                    <label>Ingiza Code (Namba 6):</label>
+                    <input type="text" id="verifyCode" required style="text-align:center; font-size:22px; letter-spacing:5px;">
+                </div>
+                <button type="submit" class="btn-blue" style="width: 100%; padding: 12px;">Thibitisha Akaunti</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="page-auth-reset" class="page">
+        <div class="auth-container">
+            <h2>Sahau Nenosiri (Reset)</h2>
+            <form id="resetForm">
+                <div class="form-group"><label>Weka Email Yako:</label><input type="email" id="resetEmail" required></div>
+                <button type="submit" class="btn-blue" style="width: 100%; padding: 12px;">Tuma Password Mpya</button>
+            </form>
+            <div class="auth-links"><a onclick="badiliUkurasa('auth-login')">➜ Rudi Kwenye Login</a></div>
+        </div>
+    </div>
+
+    <div id="page-dashboard" class="page">
+        <div class="teacher-layout">
+            <div>
+                <div class="card">
+                    <h2>Pakia Nyaraka (Smart Document Parser)</h2>
+                    <p style="font-size: 11px; color: gray; margin-bottom: 10px;">Mfumo utatambua kiotomatiki majina, namba za mitihani, vidato na alama kutoka kwenye nyaraka ya Excel.</p>
+                    <div class="upload-box" onclick="document.getElementById('excelFileInput').click()">
+                        📥 Bofya hapa kupandisha Excel (.xlsx)
+                        <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display:none;" onchange="chakataExcelHati(event)">
+                    </div>
+                    <div id="uploadStatus" style="font-size:12px; color:green; margin-top:5px; font-weight:bold;"></div>
+                </div>
+
+                <div class="card">
+                    <h2>Ingiza Taarifa na Maoni kwa Mkono</h2>
+                    <form id="studentForm">
+                        <div class="form-group">
+                            <label>Kidato (Class Level):</label>
+                            <select id="darasa" required>
+                                <option>Form 1</option><option>Form 2</option><option>Form 3</option><option>Form 4</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Jina Kamili:</label><input type="text" id="jina" required></div>
+                        <div class="form-group"><label>Namba ya Mtihani:</label><input type="text" id="namba" required></div>
+                        <div class="form-group"><label>Simu ya Mzazi:</label><input type="text" id="simu" required></div>
+
+                        <label style="font-size:12px; font-weight:bold;">Alama za Masomo 10:</label>
+                        <div class="subjects-grid">
+                            <div class="form-group"><input type="number" id="kisw" placeholder="KISW" value="0"></div>
+                            <div class="form-group"><input type="number" id="eng" placeholder="ENG" value="0"></div>
+                            <div class="form-group"><input type="number" id="math" placeholder="MATH" value="0"></div>
+                            <div class="form-group"><input type="number" id="hist" placeholder="HIST" value="0"></div>
+                            <div class="form-group"><input type="number" id="hist_tz" placeholder="HIST_TZ" value="0"></div>
+                            <div class="form-group"><input type="number" id="geo" placeholder="GEO" value="0"></div>
+                            <div class="form-group"><input type="number" id="phys" placeholder="PHYS" value="0"></div>
+                            <div class="form-group"><input type="number" id="chem" placeholder="CHEM" value="0"></div>
+                            <div class="form-group"><input type="number" id="biol" placeholder="BIOL" value="0"></div>
+                            <div class="form-group"><input type="number" id="bus" placeholder="BUS" value="0"></div>
+                        </div>
+
+                        <div class="form-group"><label>Maoni ya Mwalimu wa Darasa:</label><textarea id="maoniDarasa" rows="2">Ana juhudi nzuri na nidhamu ya hali ya juu.</textarea></div>
+                        <div class="form-group"><label>Maoni ya Mwalimu Mkuu:</label><textarea id="maoniMkuu" rows="2">Matokeo mazuri, aongeze bidii kudumisha kiwango hiki.</textarea></div>
+
+                        <button type="submit" class="btn-blue" style="width:100%; padding:10px; margin-top:5px;">Hifadhi Rekodi</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h2>Orodha ya Broadsheet ya Shule</h2>
+                    <button class="btn-blue" style="width:auto; padding:8px 15px; background:black;" onclick="printBroadsheetAll()">Print Broadsheet</button>
+                </div>
+                <div class="table-container">
+                    <table id="teacherResultsTable">
+                        <thead>
+                            <tr>
+                                <th>Kidato</th><th>Namba ya Mtihani</th><th>Jina Mwanafunzi</th>
+                                <th>KISW</th><th>ENG</th><th>MATH</th><th>HIST</th><th>HTZ</th>
+                                <th>GEO</th><th>PHYS</th><th>CHEM</th><th>BIOL</th><th>BUS</th>
+                                <th>Wastani</th><th>Daraja</th><th>Vitendo</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="printArea"></div>
+
+    <script>
+        // Uhifadhi wa Ndani ya Kivinjari (LocalStorage)
+        let wanafunziData = JSON.parse(localStorage.getItem('nyasura_wanafunzi')) || [];
+        let walimuAccounts = JSON.parse(localStorage.getItem('nyasura_walimu')) || [];
+        let sasaHiviInasubiriEmail = "";
+
+        // Kazi ya Kubadili Kurasa (Navigation)
+        function badiliUkurasa(pageId, btnElement) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            
+            if (btnElement) {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                btnElement.classList.add('active');
+            }
+            if(pageId === 'dashboard') onyeshaJedwaliMwalimu();
+        }
+
+        // ==================== AUTH SYSTEM LOGIC ====================
+        document.getElementById('signupForm').addEventListener('submit', function(e){
+            e.preventDefault();
+            const email = document.getElementById('signupEmail').value.trim();
+            const pass = document.getElementById('signupPass').value;
+            
+            if(walimuAccounts.find(w => w.email === email)) return alert("Email hii ishasajiliwa tayari!");
+
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            walimuAccounts.push({ email, pass, status: 'PENDING', code });
+            localStorage.setItem('nyasura_walimu', JSON.stringify(walimuAccounts));
+
+            sasaHiviInasubiriEmail = email;
+            document.getElementById('verifyText').innerText = `Uthibitisho umetengenezwa kwa ajili ya: ${email}. Code yako ni: ${code} (Weka namba hii hapa chini).`;
+            badiliUkurasa('auth-verify');
+        });
+
+        document.getElementById('verifyForm').addEventListener('submit', function(e){
+            e.preventDefault();
+            const codeInput = document.getElementById('verifyCode').value.trim();
+            const user = walimuAccounts.find(w => w.email === sasaHiviInasubiriEmail);
+
+            if(user && user.code === codeInput) {
+                user.status = 'ACTIVE';
+                user.code = null;
+                localStorage.setItem('nyasura_walimu', JSON.stringify(walimuAccounts));
+                alert("Akaunti yako imethibitishwa kikamilifu! Sasa unaweza kuingia.");
+                badiliUkurasa('auth-login');
+            } else {
+                alert("Namba ya siri (Verification Code) si sahihi!");
+            }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', function(e){
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            const user = walimuAccounts.find(w => w.email === email && w.pass === pass);
+
+            if(user) {
+                if(user.status === 'ACTIVE') {
+                    badiliUkurasa('dashboard');
+                } else {
+                    sasaHiviInasubiriEmail = email;
+                    alert("Akaunti yako haijathibitishwa bado. Weka namba ya uthibitisho.");
+                    badiliUkurasa('auth-verify');
+                }
+            } else {
+                alert("Barua pepe (Email) au Password si sahihi!");
+            }
+        });
+
+        document.getElementById('resetForm').addEventListener('submit', function(e){
+            e.preventDefault();
+            const email = document.getElementById('resetEmail').value.trim();
+            const user = walimuAccounts.find(w => w.email === email);
+
+            if(user) {
+                const mpya = Math.floor(100000 + Math.random() * 900000).toString();
+                user.pass = mpya;
+                localStorage.setItem('nyasura_walimu', JSON.stringify(walimuAccounts));
+                alert(`Nenosiri lako jipya la muda ni: ${mpya}\n\nTafadhali litumie kuingia kwenye mfumo sasa.`);
+                badiliUkurasa('auth-login');
+            } else {
+                alert("Email hiyo haijapatikana kwenye mfumo wetu!");
+            }
+        });
+
+        // ==================== SMART FILE PARSER LOGIC ====================
+        function chakataExcelHati(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(firstSheet);
+                
+                let hesabu = 0;
+                rows.forEach(row => {
+                    // SMART PARSING: Tafuta nguzo zenye kufanana na maneno yetu hata mwalimu akikosea kuandika
+                    let darasa = "Form 1", namba = "S0000/0000", jina = "Mwanafunzi", simu = "00000000";
+                    let kisw=0, eng=0, math=0, hist=0, hist_tz=0, geo=0, phys=0, chem=0, biol=0, bus=0;
+
+                    for (let key in row) {
+                        let lKey = key.toLowerCase().trim();
+                        if(lKey.includes("darasa") || lKey.includes("form") || lKey.includes("kidato")) darasa = row[key];
+                        else if(lKey.includes("namba") || lKey.includes("exam") || lKey.includes("index")) namba = row[key];
+                        else if(lKey.includes("jina") || lKey.includes("name")) jina = row[key];
+                        else if(lKey.includes("simu") || lKey.includes("parent") || lKey.includes("phone")) simu = row[key];
+                        
+                        // Masomo 10
+                        else if(lKey.includes("kisw")) kisw = parseFloat(row[key] || 0);
+                        else if(lKey.includes("eng")) eng = parseFloat(row[key] || 0);
+                        else if(lKey.includes("math")) math = parseFloat(row[key] || 0);
+                        else if(lKey.includes("hist") && !lKey.includes("tz")) hist = parseFloat(row[key] || 0);
+                        else if(lKey.includes("tz") || lKey.includes("tanzania")) hist_tz = parseFloat(row[key] || 0);
+                        else if(lKey.includes("geo")) geo = parseFloat(row[key] || 0);
+                        else if(lKey.includes("phys")) phys = parseFloat(row[key] || 0);
+                        else if(lKey.includes("chem")) chem = parseFloat(row[key] || 0);
+                        else if(lKey.includes("biol")) biol = parseFloat(row[key] || 0);
+                        else if(lKey.includes("bus") || lKey.includes("biashara")) bus = parseFloat(row[key] || 0);
+                    }
+
+                    const jumla = kisw + eng + math + hist + hist_tz + geo + phys + chem + biol + bus;
+                    const wastani = (jumla / 10).toFixed(1);
+                    const darajaKuu = pataDarajaKuu(wastani);
+
+                    wanafunziData.push({
+                        darasa, namba, jina, simu, kisw, eng, math, hist, hist_tz, geo, phys, chem, biol, bus, wastani, darajaKuu,
+                        maoniDarasa: "Ana juhudi za kuridhisha.", maoniMkuu: "Aendeleze bidii hii."
+                    });
+                    hesabu++;
+                });
+
+                hifadhiDataWanafunzi();
+                onyeshaJedwaliMwalimu();
+                document.getElementById('uploadStatus').innerText = `✔️ Nyaraka Imesomwa! Wanafunzi ${hesabu}, Vidato vyao na Namba zao zimetambuliwa kiotomatiki!`;
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // ==================== UCHAKATAJI WA MATOKEO (VIFUNGO/FORM) ====================
+        function pataDarajaSomo(a) {
+            if (a >= 75) return 'A'; if (a >= 65) return 'B'; if (a >= 45) return 'C'; if (a >= 30) return 'D'; return 'F';
+        }
+        function pataDarajaKuu(w) {
+            if (w >= 75) return 'DIV I'; if (w >= 65) return 'DIV II'; if (w >= 45) return 'DIV III'; if (w >= 30) return 'DIV IV'; return 'DIV 0';
+        }
+
+        document.getElementById('studentForm').addEventListener('submit', function(e){
+            e.preventDefault();
+            const kisw = parseFloat(document.getElementById('kisw').value || 0);
+            const eng = parseFloat(document.getElementById('eng').value || 0);
+            const math = parseFloat(document.getElementById('math').value || 0);
+            const hist = parseFloat(document.getElementById('hist').value || 0);
+            const hist_tz = parseFloat(document.getElementById('hist_tz').value || 0);
+            const geo = parseFloat(document.getElementById('geo').value || 0);
+            const phys = parseFloat(document.getElementById('phys').value || 0);
+            const chem = parseFloat(document.getElementById('chem').value || 0);
+            const biol = parseFloat(document.getElementById('biol').value || 0);
+            const bus = parseFloat(document.getElementById('bus').value || 0);
+
+            const jumla = kisw + eng + math + hist + hist_tz + geo + phys + chem + biol + bus;
+            const wastani = (jumla / 10).toFixed(1);
+
+            wanafunziData.push({
+                darasa: document.getElementById('darasa').value,
+                jina: document.getElementById('jina').value,
+                namba: document.getElementById('namba').value,
+                simu: document.getElementById('simu').value,
+                kisw, eng, math, hist, hist_tz, geo, phys, chem, biol, bus, wastani,
+                darajaKuu: pataDarajaKuu(wastani),
+                maoniDarasa: document.getElementById('maoniDarasa').value,
+                maoniMkuu: document.getElementById('maoniMkuu').value
+            });
+
+            hifadhiDataWanafunzi();
+            onyeshaJedwaliMwalimu();
+            document.getElementById('studentForm').reset();
+        });
+
+        function hifadhiDataWanafunzi() {
+            localStorage.setItem('nyasura_wanafunzi', JSON.stringify(wanafunziData));
+        }
+
+        function onyeshaJedwaliMwalimu() {
+            const tbody = document.querySelector('#teacherResultsTable tbody');
+            if(!tbody) return; tbody.innerHTML = '';
+
+            wanafunziData.forEach((stu, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${stu.darasa}</td><td><b>${stu.namba}</b></td><td style="text-align:left;">${stu.jina}</td>
+                    <td>${stu.kisw}</td><td>${stu.eng}</td><td>${stu.math}</td><td>${stu.hist}</td><td>${stu.hist_tz}</td>
+                    <td>${stu.geo}</td><td>${stu.phys}</td><td>${stu.chem}</td><td>${stu.biol}</td><td>${stu.bus}</td>
+                    <td><b>${stu.wastani}</b></td><td><b>${stu.darajaKuu}</b></td>
+                    <td class="actions-cell">
+                        <button class="btn-table btn-sms" onclick="tumaSMS(${index})">SMS</button>
+                        <button class="btn-table btn-print" onclick="printReportCardMoja(${index})">Print</button>
+                        <button class="btn-table btn-delete" onclick="futaMwanafunzi(${index})">Futa</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // UPANDE WA WAZAZI - TAFUTA MATOKEO
+        function tafutaMatokeoMzazi() {
+            const nambaInput = document.getElementById('parentSearchNamba').value.trim();
+            const res = wanafunziData.find(s => s.namba.toLowerCase() === nambaInput.toLowerCase());
+            const area = document.getElementById('parentResultArea');
+
+            if(!res) {
+                area.innerHTML = `<p style="color:red; font-weight:bold; margin-top:15px;">⚠️ Namba haipo. Wasiliana na mwalimu wa darasa Nyasura Sekondari.</p>`;
+                return;
+            }
+
+            area.innerHTML = `
+                <div style="text-align:left; border-top:3px solid var(--primary-blue); padding-top:15px; margin-top:20px;">
+                    <h3 style="text-align:center; color:var(--primary-blue);">RIPOTI RASMI: ${res.jina.toUpperCase()}</h3>
+                    <p><b>Kidato:</b> ${res.darasa} | <b>Namba:</b> ${res.namba}</p>
+                    <hr style="margin:10px 0; border:0; border-top:1px solid #ddd;">
+                    <p><b>Wastani Jumla:</b> ${res.wastani} | <b>Daraja:</b> ${res.darajaKuu}</p>
+                    <div style="background:#eef2f7; padding:10px; margin:10px 0; border-left:4px solid var(--primary-blue); font-size:13px;">
+                        <p><b>Maoni ya Mwalimu wa Darasa:</b> <i>"${res.maoniDarasa}"</i></p>
+                        <p style="margin-top:5px;"><b>Maoni ya Mwalimu Mkuu:</b> <i>"${res.maoniMkuu}"</i></p>
+                    </div>
+                    <center><button class="btn-print" style="color:white; padding:8px 15px; border-radius:4px; border:none;" onclick="printReportCardMoja(${wanafunziData.indexOf(res)})">Print Slipi Ndogo</button></center>
+                </div>
+            `;
+        }
+
+        // KAZI ZA KUCHAPISHA (PRINT LAYOUTS)
+        function printReportCardMoja(index) {
+            const s = wanafunziData[index];
+            const pArea = document.getElementById('printArea');
+            pArea.innerHTML = `
+                <div style="padding: 40px; border: 4px double #000; max-width: 650px; margin: auto; font-family: Arial;">
+                    <center>
+                        <h2>NYASURA SEKONDARI, BUNDA</h2><p>S.L.P 219, BUNDA</p>
+                        <h3>SLIPU RASMI YA MATOKEO YA MASOMO 10</h3><hr style="border:1px solid #000; margin:15px 0;">
+                    </center>
+                    <p style="font-size:14px;"><b>Mwanafunzi:</b> ${s.jina} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>Kidato:</b> ${s.darasa}</p>
+                    <p style="font-size:14px;"><b>Namba ya Mtihani:</b> ${s.namba}</p>
+                    <table>
+                        <thead><tr><th>Somo</th><th>Alama</th><th>Daraja</th></tr></thead>
+                        <tbody>
+                            <tr><td>Kiswahili</td><td>${s.kisw}</td><td>${pataDarajaSomo(s.kisw)}</td></tr>
+                            <tr><td>English</td><td>${s.eng}</td><td>${pataDarajaSomo(s.eng)}</td></tr>
+                            <tr><td>Mathematics</td><td>${s.math}</td><td>${pataDarajaSomo(s.math)}</td></tr>
+                            <tr><td>History</td><td>${s.hist}</td><td>${pataDarajaSomo(s.hist)}</td></tr>
+                            <tr><td>Historia ya Tanzania</td><td>${s.hist_tz}</td><td>${pataDarajaSomo(s.hist_tz)}</td></tr>
+                            <tr><td>Geography</td><td>${s.geo}</td><td>${pataDarajaSomo(s.geo)}</td></tr>
+                            <tr><td>Physics</td><td>${s.phys}</td><td>${pataDarajaSomo(s.phys)}</td></tr>
+                            <tr><td>Chemistry</td><td>${s.chem}</td><td>${pataDarajaSomo(s.chem)}</td></tr>
+                            <tr><td>Biology</td><td>${s.biol}</td><td>${pataDarajaSomo(s.biol)}</td></tr>
+                            <tr><td>Business Studies</td><td>${s.bus}</td><td>${pataDarajaSomo(s.bus)}</td></tr>
+                        </tbody>
+                    </table>
+                    <p style="font-size:15px; margin:15px 0;"><b>WASTANI JUMLA:</b> ${s.wastani} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>DARAJA KUU:</b> ${s.darajaKuu}</p>
+                    <div style="border:1px solid #000; padding:10px; font-size:12px; background:#fff;">
+                        <p><b>Maoni ya Mwalimu wa Darasa:</b> ${s.maoniDarasa}</p>
+                        <p style="margin-top:5px;"><b>Maoni ya Mwalimu Mkuu:</b> ${s.maoniMkuu}</p>
+                    </div>
+                    <br><br><br><p align="right">_______________________<br>Sahihi & Muhuri wa Shule</p>
+                </div>
+            `;
+            window.print();
+        }
+
+        function printBroadsheetAll() {
+            const pArea = document.getElementById('printArea');
+            let rowsHtml = '';
+            wanafunziData.forEach(s => {
+                rowsHtml += `<tr><td>${s.darasa}</td><td>${s.namba}</td><td style="text-align:left;">${s.jina}</td><td>${s.kisw}</td><td>${s.eng}</td><td>${s.math}</td><td>${s.hist}</td><td>${s.hist_tz}</td><td>${s.geo}</td><td>${s.phys}</td><td>${s.chem}</td><td>${s.biol}</td><td>${s.bus}</td><td><b>${s.wastani}</b></td><td><b>${s.darajaKuu}</b></td></tr>`;
+            });
+
+            pArea.innerHTML = `
+                <div style="padding: 20px; font-family: Arial;">
+                    <center><h2>NYASURA SEKONDARI, BUNDA</h2><h3>BROADSHEET KUU YA MATOKEO YA WANAFUNZI</h3></center>
+                    <table>
+                        <thead><tr><th>Kidato</th><th>Namba</th><th>Jina</th><th>KISW</th><th>ENG</th><th>MATH</th><th>HIST</th><th>HTZ</th><th>GEO</th><th>PHYS</th><th>CHEM</th><th>BIOL</th><th>BUS</th><th>Wastani</th><th>Daraja</th></tr></thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>
+            `;
+            window.print();
+        }
+
+        function tumaSMS(index) {
+            const s = wanafunziData[index];
+            alert(`[SMS GATEWAY] Tuma kwenda kwa Mzazi (${s.simu}):\n\nMatokeo ya ${s.jina} (${s.darasa}): Wastani: ${s.wastani}, Daraja: ${s.darajaKuu}. Maoni ya Mkuu: ${s.maoniMkuu}`);
+        }
+
+        function futaMwanafunzi(index) {
+            if(confirm("Futa taarifa za mwanafunzi huyu?")) {
+                wanafunziData.splice(index, 1); hifadhiDataWanafunzi(); onyeshaJedwaliMwalimu();
+            }
+        }
+    </script>
+</body>
+</html>
